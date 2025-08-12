@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: transaction_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Cache Maven packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+    
+    - name: Get version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+    
+    - name: Run tests
+      run: ./mvnw clean test
+      env:
+        SPRING_PROFILES_ACTIVE: test
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/transaction_test
+        SPRING_DATASOURCE_USERNAME: postgres
+        SPRING_DATASOURCE_PASSWORD: postgres
+    
+    - name: Build application
+      run: ./mvnw clean package -DskipTests
+    
+    - name: Build Docker image
+      run: |
+        docker build -t transaction-management:${{ steps.get_version.outputs.VERSION }} .
+        docker build -t transaction-management:latest .
+    
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Push Docker images
+      run: |
+        docker tag transaction-management:${{ steps.get_version.outputs.VERSION }} ${{ secrets.DOCKER_USERNAME }}/transaction-management:${{ steps.get_version.outputs.VERSION }}
+        docker tag transaction-management:latest ${{ secrets.DOCKER_USERNAME }}/transaction-management:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/transaction-management:${{ steps.get_version.outputs.VERSION }}
+        docker push ${{ secrets.DOCKER_USERNAME }}/transaction-management:latest
+    
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ steps.get_version.outputs.VERSION }}
+        body: |
+          ## Changes in this Release
+          
+          ### Features
+          - Transaction management system
+          - RESTful API endpoints
+          - Database integration with PostgreSQL
+          - Caching with Redis
+          - Performance monitoring
+          - Docker containerization
+          
+          ### Docker Images
+          - `${{ secrets.DOCKER_USERNAME }}/transaction-management:${{ steps.get_version.outputs.VERSION }}`
+          - `${{ secrets.DOCKER_USERNAME }}/transaction-management:latest`
+          
+          ### Installation
+          ```bash
+          docker pull ${{ secrets.DOCKER_USERNAME }}/transaction-management:${{ steps.get_version.outputs.VERSION }}
+          ```
+        draft: false
+        prerelease: false
+    
+    - name: Upload JAR to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: target/transaction-management-*.jar
+        asset_name: transaction-management-${{ steps.get_version.outputs.VERSION }}.jar
+        asset_content_type: application/java-archive

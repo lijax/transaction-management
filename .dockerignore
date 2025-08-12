@@ -1,0 +1,58 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts (except target for multi-stage build)
+*.log
+*.tmp
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Test files and reports
+target/surefire-reports/
+target/failsafe-reports/
+target/site/
+
+# Maven wrapper (we copy it explicitly)
+# .mvn/
+# mvnw
+# mvnw.cmd
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Node modules (if any)
+node_modules/
+
+# Coverage reports
+coverage/
+*.coverage
+
+# Logs
+logs/
+*.log
