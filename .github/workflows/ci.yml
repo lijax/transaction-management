@@ -44,9 +44,6 @@ jobs:
       run: ./mvnw clean test
       env:
         SPRING_PROFILES_ACTIVE: test
-        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/transaction_test
-        SPRING_DATASOURCE_USERNAME: postgres
-        SPRING_DATASOURCE_PASSWORD: postgres
     
     - name: Generate test report
       uses: dorny/test-reporter@v1
