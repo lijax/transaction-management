@@ -1,5 +1,5 @@
 # Multi-stage build for optimized Java 17 runtime
-FROM maven:3.9.6-openjdk-17-slim AS build
+FROM maven:3.9.6 AS build
 
 # Set working directory
 WORKDIR /app
@@ -19,7 +19,7 @@ COPY src src
 RUN mvn clean package -DskipTests
 
 # Runtime stage with optimized JRE
-FROM openjdk:17-jre-slim
+FROM openjdk:17-ea-17-slim
 
 # Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
